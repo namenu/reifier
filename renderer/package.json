@@ -10,6 +10,7 @@
   "license": "ISC",
   "dependencies": {
     "diff2html": "^3.4.22",
-    "mustache": "^4.2.0"
+    "mustache": "^4.2.0",
+    "wrangler": "^2.6.2"
   }
 }

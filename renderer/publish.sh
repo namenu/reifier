@@ -2,7 +2,7 @@
 
 set -e
 
-mkdir public
+mkdir -p public
 
 node index.js $1 $2 $3 > public/index.html
 

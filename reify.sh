@@ -1,10 +1,13 @@
 #!/bin/sh
 
 set -e
-set -x
+# set -x
 
-# checkout target branch to build
-BRANCH=${1-master}
+## set working directory
+cd "$1"
+
+## checkout target branch to build
+BRANCH=${2-master}
 
 echo "Switching to $BRANCH"
 
@@ -26,7 +29,6 @@ if git ls-remote --exit-code . "origin/$ORPHAN"; then
 else
     git switch -f --orphan $ORPHAN
 fi
-
 
 ## working directory may track some files due to build script
 git rm -r --cached --ignore-unmatch .

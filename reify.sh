@@ -12,7 +12,8 @@ BRANCH=${2-master}
 echo "Switching to $BRANCH"
 
 git switch "$BRANCH"
-git pull
+# TODO: only when branch is tracked
+# git pull
 
 REIFIER_BUILD="${REIFIER_BUILD-yarn && yarn build}"
 
@@ -27,7 +28,13 @@ if git ls-remote --exit-code . "origin/$ORPHAN"; then
     git switch -f $ORPHAN
     git pull
 else
-    git switch -f --orphan $ORPHAN
+    set +e
+    if git switch -f --orphan $ORPHAN; then
+        echo "Created orphan branch $ORPHAN"
+    else
+        git switch -f $ORPHAN
+    fi
+    set -e
 fi
 
 ## working directory may track some files due to build script

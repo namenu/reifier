@@ -10,14 +10,14 @@ export interface RunOptions {
   base: string;
   head: string;
   buildCommand: string;
-  pattern: string;
+  include: string[];
   output?: string;
   clean?: boolean;
   noPush?: boolean;
 }
 
 export async function run(options: RunOptions): Promise<string> {
-  const { repo, base, head, buildCommand, pattern, output, clean, noPush } = options;
+  const { repo, base, head, buildCommand, include, output, clean, noPush } = options;
 
   const repoPath = path.resolve(repo);
   const ops = createGit(repoPath);
@@ -32,7 +32,7 @@ export async function run(options: RunOptions): Promise<string> {
       repo,
       branch: base,
       buildCommand,
-      pattern,
+      include,
       clean,
       noPush,
     });
@@ -43,7 +43,7 @@ export async function run(options: RunOptions): Promise<string> {
       repo,
       branch: head,
       buildCommand,
-      pattern,
+      include,
       clean,
       noPush,
     });

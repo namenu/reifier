@@ -8,7 +8,6 @@ import { deploy } from "./commands/deploy.js";
 import { loadConfig } from "./lib/config.js";
 
 const DEFAULT_BUILD_COMMAND = "yarn && yarn build";
-const DEFAULT_PATTERN = ".*\\.bs\\.js";
 
 const program = new Command();
 
@@ -17,23 +16,32 @@ program
   .description("Git branch build artifact diff tool")
   .version("0.2.0");
 
+function collect(value: string, previous: string[]): string[] {
+  return previous.concat([value]);
+}
+
 program
   .command("capture")
   .description("Capture build artifacts from a branch")
   .argument("<repo>", "Repository path")
   .argument("<branch>", "Branch name to capture")
   .option("-b, --build <command>", "Build command")
-  .option("-p, --pattern <regex>", "File pattern to capture")
+  .option("-i, --include <pattern>", "Glob pattern to include (can be specified multiple times)", collect, [])
   .option("--clean", "Clean previous build artifacts before building")
   .option("--no-push", "Skip git push")
   .action(async (repo, branch, options) => {
     try {
       const config = loadConfig(repo);
+      const include = options.include.length > 0 ? options.include : config.include;
+      if (!include || include.length === 0) {
+        console.error("Error: --include option or config.include is required");
+        process.exit(1);
+      }
       await capture({
         repo,
         branch,
         buildCommand: options.build ?? config.buildCommand ?? DEFAULT_BUILD_COMMAND,
-        pattern: options.pattern ?? config.pattern ?? DEFAULT_PATTERN,
+        include,
         clean: options.clean,
         noPush: !options.push,
       });
@@ -71,19 +79,24 @@ program
   .requiredOption("--base <branch>", "Base branch")
   .requiredOption("--head <branch>", "Head branch")
   .option("-b, --build <command>", "Build command")
-  .option("-p, --pattern <regex>", "File pattern to capture")
+  .option("-i, --include <pattern>", "Glob pattern to include (can be specified multiple times)", collect, [])
   .option("-o, --output <file>", "Output file (default: stdout)")
   .option("--clean", "Clean previous build artifacts before building")
   .option("--no-push", "Skip git push")
   .action(async (repo, options) => {
     try {
       const config = loadConfig(repo);
+      const include = options.include.length > 0 ? options.include : config.include;
+      if (!include || include.length === 0) {
+        console.error("Error: --include option or config.include is required");
+        process.exit(1);
+      }
       await run({
         repo,
         base: options.base,
         head: options.head,
         buildCommand: options.build ?? config.buildCommand ?? DEFAULT_BUILD_COMMAND,
-        pattern: options.pattern ?? config.pattern ?? DEFAULT_PATTERN,
+        include,
         output: options.output,
         clean: options.clean,
         noPush: !options.push,

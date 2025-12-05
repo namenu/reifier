@@ -3,7 +3,7 @@ import * as path from "path";
 
 export interface ReifierConfig {
   buildCommand?: string;
-  pattern?: string;
+  include?: string[];
   artifactsBranch?: string;
 }
 

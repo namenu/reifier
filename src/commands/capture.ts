@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import { execSync } from "child_process";
+import fg from "fast-glob";
 import {
   createGit,
   switchBranch,
@@ -15,7 +16,7 @@ export interface CaptureOptions {
   repo: string;
   branch: string;
   buildCommand: string;
-  pattern: string;
+  include: string[];
   orphanBranch?: string;
   noPush?: boolean;
   clean?: boolean;
@@ -29,7 +30,7 @@ export async function capture(options: CaptureOptions): Promise<string> {
     repo,
     branch,
     buildCommand,
-    pattern,
+    include,
     orphanBranch = DEFAULT_ORPHAN_BRANCH,
     noPush = false,
     clean = false,
@@ -55,8 +56,8 @@ export async function capture(options: CaptureOptions): Promise<string> {
 
   // Collect files BEFORE switching to orphan branch
   // (orphan branch switch may clear tracked files from working directory)
-  console.log(`Collecting artifacts matching: ${pattern}`);
-  const collectedFiles = collectArtifacts(repoPath, pattern);
+  console.log(`Collecting artifacts matching: ${include.join(", ")}`);
+  const collectedFiles = collectArtifacts(repoPath, include);
 
   if (collectedFiles.length === 0) {
     console.log("No files matched the pattern");
@@ -106,31 +107,25 @@ interface CollectedFile {
   content: Buffer;
 }
 
-function collectArtifacts(srcRoot: string, pattern: string): CollectedFile[] {
-  const findCmd = `find . -regex "${pattern}" ! -path "./${ARTIFACTS_DIR}/*" ! -path "./node_modules/*" ! -path "./.git/*"`;
+function collectArtifacts(srcRoot: string, include: string[]): CollectedFile[] {
+  const files = fg.sync(include, {
+    cwd: srcRoot,
+    ignore: [
+      `${ARTIFACTS_DIR}/**`,
+      ".git/**",
+    ],
+    onlyFiles: true,
+  });
 
-  try {
-    const output = execSync(findCmd, { cwd: srcRoot, encoding: "utf8" }).trim();
-    if (!output) {
-      return [];
-    }
+  const collected: CollectedFile[] = [];
 
-    const files = output.split("\n").filter(Boolean);
-    const collected: CollectedFile[] = [];
-
-    for (const file of files) {
-      const srcPath = path.join(srcRoot, file);
-      const relativePath = file.startsWith("./") ? file.slice(2) : file;
-
-      // Read file content into memory before branch switch
-      const content = fs.readFileSync(srcPath);
-      collected.push({ relativePath, content });
-    }
-
-    return collected;
-  } catch {
-    return [];
+  for (const file of files) {
+    const srcPath = path.join(srcRoot, file);
+    const content = fs.readFileSync(srcPath);
+    collected.push({ relativePath: file, content });
   }
+
+  return collected;
 }
 
 async function commitArtifacts(ops: GitOps, branch: string): Promise<void> {

@@ -15,8 +15,9 @@ export async function diff(options: DiffOptions): Promise<string> {
   const { repo, base, head, output } = options;
 
   const repoPath = path.resolve(repo);
-  const baseDir = path.join(repoPath, ARTIFACTS_DIR, base);
-  const headDir = path.join(repoPath, ARTIFACTS_DIR, head);
+  const artifactsDir = path.join(repoPath, ARTIFACTS_DIR);
+  const baseDir = path.join(artifactsDir, base);
+  const headDir = path.join(artifactsDir, head);
 
   // Validate directories exist
   if (!fs.existsSync(baseDir)) {
@@ -27,7 +28,7 @@ export async function diff(options: DiffOptions): Promise<string> {
   }
 
   console.log(`Generating diff: ${base} -> ${head}`);
-  const html = generateDiffHtml(baseDir, headDir);
+  const html = generateDiffHtml(base, head, artifactsDir);
 
   if (output) {
     fs.writeFileSync(output, html);

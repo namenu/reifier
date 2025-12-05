@@ -6,9 +6,9 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-export function generateDiff(srcDir: string, dstDir: string): string {
+export function generateDiff(base: string, head: string, cwd: string): string {
   try {
-    execSync(`diff -ruN "${srcDir}" "${dstDir}"`);
+    execSync(`diff -ruN "${base}" "${head}"`, { cwd });
     return "";
   } catch (error: unknown) {
     const execError = error as { stdout?: Buffer };
@@ -48,7 +48,7 @@ export function renderHtml(diffString: string): string {
   return Mustache.render(template, { diffString: escaped });
 }
 
-export function generateDiffHtml(srcDir: string, dstDir: string): string {
-  const diffString = generateDiff(srcDir, dstDir);
+export function generateDiffHtml(base: string, head: string, cwd: string): string {
+  const diffString = generateDiff(base, head, cwd);
   return renderHtml(diffString);
 }

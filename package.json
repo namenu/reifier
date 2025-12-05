@@ -1,0 +1,40 @@
+{
+  "name": "reifier",
+  "version": "0.1.0",
+  "description": "Git branch build artifact diff tool",
+  "type": "module",
+  "bin": {
+    "reifier": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsup && cp -r src/templates dist/",
+    "dev": "tsup --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "commander": "^12.1.0",
+    "mustache": "^4.2.0",
+    "simple-git": "^3.27.0"
+  },
+  "devDependencies": {
+    "@types/mustache": "^4.2.5",
+    "@types/node": "^22.10.1",
+    "tsup": "^8.3.5",
+    "typescript": "^5.7.2",
+    "vitest": "^2.1.8"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

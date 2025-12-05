@@ -1,30 +1,156 @@
-# reifier
+# Reifier
 
-### 실행
+Git 브랜치 간 빌드 결과물(artifact)을 비교하는 CLI 도구.
 
-```
-./reifier.sh {repo} {branch}
-```
+PR 리뷰 시 컴파일된 결과물의 변경사항을 시각적으로 확인할 수 있다.
 
-### 환경 변수
+## 설치
 
-- REIFIER_BUILD: 빌드 스크립트
-- REIFIER_PATTERN: 추적할 파일명의 정규식
-- REIFIER_NOPUSH: git push 를 생략하고자 할 때
-
-
-### HTML diff 생성
-
-```
-cd renderer
-yarn install
-node index.js {repo} {before} {after} > index.html
+```bash
+npm install -g reifier
+# 또는
+npx reifier
 ```
 
-before, after 는 브랜치명
+## Quick Start
 
-Cloudflare Wrangler가 설치되어 있다면, 아래 명령어로 Cloudflare Pages에 배포
+```bash
+# 두 브랜치의 빌드 결과물 비교
+npx reifier run ./my-repo --base main --head feature-branch -o diff.html
+```
 
+이 명령어는:
+1. `main` 브랜치로 전환 → 빌드 → 결과물 캡처
+2. `feature-branch`로 전환 → 빌드 → 결과물 캡처
+3. 두 결과물의 diff를 HTML로 생성
+
+## CLI 명령어
+
+### `run` - 전체 파이프라인
+
+가장 일반적인 사용법. 두 브랜치를 비교하는 전체 과정을 한 번에 실행.
+
+```bash
+reifier run <repo> --base <branch> --head <branch> [options]
 ```
-./publish.sh {repo} {before} {after}
+
+**예시:**
+```bash
+# 기본 사용
+reifier run . --base main --head feature/new-ui
+
+# 커스텀 빌드 명령어
+reifier run . --base main --head develop --build "npm run build"
+
+# JavaScript 파일만 비교
+reifier run . --base main --head feature --pattern ".*\.js$"
+
+# 결과를 파일로 저장
+reifier run . --base main --head feature -o diff.html
+
+# git push 생략 (로컬 테스트용)
+reifier run . --base main --head feature --no-push
 ```
+
+### `capture` - 단일 브랜치 캡처
+
+특정 브랜치의 빌드 결과물만 캡처. 이미 캡처된 브랜치가 있을 때 유용.
+
+```bash
+reifier capture <repo> <branch> [options]
+```
+
+**예시:**
+```bash
+reifier capture . main
+reifier capture . feature-branch --build "yarn build"
+```
+
+### `diff` - diff HTML 생성
+
+이미 캡처된 두 브랜치의 결과물로 diff HTML 생성.
+
+```bash
+reifier diff <repo> <base> <head> [options]
+```
+
+**예시:**
+```bash
+reifier diff . main feature-branch -o diff.html
+```
+
+## 옵션
+
+| 옵션 | 설명 | 기본값 |
+|------|------|--------|
+| `-b, --build <cmd>` | 빌드 명령어 | `yarn && yarn build` |
+| `-p, --pattern <regex>` | 캡처할 파일 패턴 (정규식) | `.*\.bs\.js` |
+| `-o, --output <file>` | 출력 파일 경로 | stdout |
+| `--no-push` | git push 생략 | false |
+
+## 작동 방식
+
+1. **캡처**: 각 브랜치에서 빌드 실행 후, 패턴에 맞는 파일들을 `_artifacts/{branch}/` 디렉토리에 복사
+2. **저장**: `reified`라는 orphan 브랜치에 결과물 커밋 (히스토리 추적용)
+3. **비교**: 두 브랜치의 `_artifacts` 디렉토리를 `diff`로 비교
+4. **렌더링**: [diff2html](https://diff2html.xyz/)로 보기 좋은 HTML 생성
+
+## 사용 예시
+
+### ReScript 프로젝트
+
+```bash
+# .bs.js 파일 비교 (기본값)
+reifier run . --base main --head feature
+```
+
+### Next.js 프로젝트
+
+```bash
+reifier run . --base main --head feature \
+  --build "npm run build" \
+  --pattern ".next/.*\.js$"
+```
+
+### 일반 JavaScript 프로젝트
+
+```bash
+reifier run . --base main --head feature \
+  --build "npm run build" \
+  --pattern "dist/.*"
+```
+
+## 라이브러리로 사용
+
+```typescript
+import { capture, diff, run } from 'reifier';
+
+// 전체 파이프라인
+await run({
+  repo: '.',
+  base: 'main',
+  head: 'feature',
+  buildCommand: 'npm run build',
+  pattern: '.*\\.js$',
+  output: 'diff.html',
+});
+
+// 개별 명령어
+await capture({
+  repo: '.',
+  branch: 'main',
+  buildCommand: 'npm run build',
+  pattern: '.*\\.js$',
+});
+
+await diff({
+  repo: '.',
+  base: 'main',
+  head: 'feature',
+  output: 'diff.html',
+});
+```
+
+## License
+
+MIT

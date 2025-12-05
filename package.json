@@ -1,8 +1,15 @@
 {
   "name": "reifier",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Git branch build artifact diff tool",
   "type": "module",
+  "keywords": ["git", "diff", "build", "artifacts", "compare", "rescript"],
+  "author": "namenu",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/namenu/reifier"
+  },
   "bin": {
     "reifier": "./dist/cli.js"
   },
@@ -16,7 +23,7 @@
     "templates"
   ],
   "scripts": {
-    "build": "bun build src/cli.ts --outfile dist/cli.js --target bun && cp -r src/templates dist/",
+    "build": "bun build src/cli.ts --outfile dist/cli.js --target node && cp -r src/templates dist/",
     "dev": "bun --watch src/cli.ts",
     "typecheck": "tsc --noEmit",
     "test": "bun test",
@@ -30,6 +37,7 @@
   "devDependencies": {
     "@types/bun": "latest",
     "@types/mustache": "^4.2.5",
-    "typescript": "^5.7.2"
+    "typescript": "^5.7.2",
+    "surge": "*"
   }
 }

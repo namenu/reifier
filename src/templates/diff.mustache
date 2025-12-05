@@ -2,33 +2,439 @@
 <html lang="en-us">
   <head>
     <meta charset="utf-8" />
-    <!-- Make sure to load the highlight.js CSS file before the Diff2Html CSS file -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
+    <title>Diff</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" media="(prefers-color-scheme: light), (prefers-color-scheme: no-preference)" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github-dark.min.css" media="(prefers-color-scheme: dark)" />
     <link rel="stylesheet" type="text/css" href="https://cdn.jsdelivr.net/npm/diff2html/bundles/css/diff2html.min.css" />
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
-  </head>
-  <script>
-    const diffString = {{{diffString}}};
+    <style>
+      :root {
+        --font-mono: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
+        --bg-primary: #ffffff;
+        --bg-secondary: #f6f8fa;
+        --bg-tertiary: #f0f2f5;
+        --text-primary: #24292f;
+        --text-secondary: #57606a;
+        --border-color: #d0d7de;
+        --add-bg: #dafbe1;
+        --add-text: #116329;
+        --del-bg: #ffebe9;
+        --del-text: #82071e;
+        --btn-bg: #f6f8fa;
+        --btn-hover: #e8ebef;
+        --sidebar-width: 280px;
+        --highlight-bg: #fff8c5;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg-primary: #0d1117;
+          --bg-secondary: #161b22;
+          --bg-tertiary: #1c2128;
+          --text-primary: #c9d1d9;
+          --text-secondary: #8b949e;
+          --border-color: #30363d;
+          --add-bg: #1a4721;
+          --add-text: #3fb950;
+          --del-bg: #5a1e23;
+          --del-text: #f85149;
+          --btn-bg: #21262d;
+          --btn-hover: #30363d;
+          --highlight-bg: #3d2e00;
+        }
+      }
+      * { box-sizing: border-box; }
+      html, body { margin: 0; }
+      body {
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+      }
 
-    document.addEventListener('DOMContentLoaded', function () {
-      var targetElement = document.getElementById('myDiffElement');
-      var configuration = {
-        drawFileList: true,
-        fileListToggle: false,
-        fileListStartVisible: false,
-        fileContentToggle: false,
-        matching: 'lines',
-        outputFormat: 'side-by-side',
-        synchronisedScroll: true,
-        highlight: true,
-        renderNothingWhenEmpty: false,
-      };
-      var diff2htmlUi = new Diff2HtmlUI(targetElement, diffString, configuration);
-      diff2htmlUi.draw();
-      diff2htmlUi.highlightCode();
-    });
-  </script>
+      /* Toolbar - fixed at top */
+      .diff-toolbar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 48px;
+        z-index: 100;
+        background: var(--bg-secondary);
+        border-bottom: 1px solid var(--border-color);
+        padding: 8px 16px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .diff-toolbar input {
+        padding: 5px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: var(--bg-primary);
+        color: var(--text-primary);
+        font-size: 13px;
+        width: 200px;
+      }
+      .diff-toolbar input:focus {
+        outline: none;
+        border-color: #0969da;
+      }
+      .diff-toolbar button {
+        padding: 5px 10px;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        background: var(--btn-bg);
+        color: var(--text-primary);
+        font-size: 13px;
+        cursor: pointer;
+      }
+      .diff-toolbar button:hover {
+        background: var(--btn-hover);
+      }
+      .diff-stats {
+        margin-left: auto;
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
+      .diff-stats .add { color: var(--add-text); font-weight: 600; }
+      .diff-stats .del { color: var(--del-text); font-weight: 600; }
+      .mode-toggle {
+        display: flex;
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        overflow: hidden;
+      }
+      .mode-toggle button {
+        border: none;
+        border-radius: 0;
+        border-right: 1px solid var(--border-color);
+      }
+      .mode-toggle button:last-child { border-right: none; }
+      .mode-toggle button.active {
+        background: #0969da;
+        color: white;
+      }
+
+      /* Sidebar - fixed on left */
+      .diff-sidebar {
+        position: fixed;
+        top: 48px;
+        left: 0;
+        bottom: 0;
+        width: var(--sidebar-width);
+        z-index: 90;
+        background: var(--bg-secondary);
+        border-right: 1px solid var(--border-color);
+        overflow-y: auto;
+      }
+      .sidebar-header {
+        padding: 12px;
+        font-weight: 600;
+        font-size: 13px;
+        border-bottom: 1px solid var(--border-color);
+        background: var(--bg-tertiary);
+        position: sticky;
+        top: 0;
+      }
+      .file-tree {
+        font-size: 13px;
+      }
+      .tree-folder {
+        padding: 6px 12px 6px 8px;
+        color: var(--text-secondary);
+        font-weight: 500;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .tree-folder:hover {
+        background: var(--bg-tertiary);
+      }
+      .tree-folder .icon { font-size: 10px; width: 12px; }
+      .tree-folder.collapsed + .tree-children { display: none; }
+      .tree-children { margin-left: 8px; }
+      .tree-file {
+        padding: 5px 12px 5px 20px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border-left: 2px solid transparent;
+      }
+      .tree-file:hover {
+        background: var(--bg-tertiary);
+      }
+      .tree-file.active {
+        background: var(--highlight-bg);
+        border-left-color: #0969da;
+      }
+      .tree-file.hidden { display: none; }
+      .tree-file .badge {
+        font-size: 11px;
+        margin-left: auto;
+        padding: 1px 5px;
+        border-radius: 10px;
+      }
+      .tree-file .badge.added { background: var(--add-bg); color: var(--add-text); }
+      .tree-file .badge.deleted { background: var(--del-bg); color: var(--del-text); }
+      .tree-file .badge.modified { background: #ddf4ff; color: #0969da; }
+      @media (prefers-color-scheme: dark) {
+        .tree-file .badge.modified { background: #1a3a52; color: #58a6ff; }
+      }
+
+      /* Content - normal document flow with margins */
+      .diff-content {
+        margin-top: 48px;
+        margin-left: var(--sidebar-width);
+        padding: 16px;
+        min-height: calc(100vh - 48px);
+      }
+      .d2h-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      .d2h-file-list-wrapper { display: none !important; }
+      .d2h-file-header,
+      .d2h-file-header.d2h-sticky-header {
+        background: var(--bg-secondary) !important;
+        border: none;
+        border-radius: 6px 6px 0 0;
+        padding: 8px 12px !important;
+        position: sticky;
+        top: 48px !important;
+        z-index: 50;
+      }
+      .d2h-file-wrapper {
+        border: 1px solid var(--border-color);
+        border-radius: 6px;
+        margin-bottom: 16px;
+        scroll-margin-top: 16px;
+      }
+      .d2h-code-line, .d2h-code-side-line {
+        font-family: var(--font-mono);
+        font-size: 12px;
+        line-height: 20px;
+      }
+      .d2h-ins { background-color: var(--add-bg) !important; }
+      .d2h-ins .d2h-code-line-ctn { color: var(--add-text); }
+      .d2h-del { background-color: var(--del-bg) !important; }
+      .d2h-del .d2h-code-line-ctn { color: var(--del-text); }
+
+      /* Empty placeholder background */
+      .d2h-emptyplaceholder,
+      .d2h-code-side-emptyplaceholder {
+        background-color: var(--bg-secondary) !important;
+      }
+      /* Clean up table borders */
+      .d2h-diff-table {
+        border-collapse: collapse;
+        border-spacing: 0;
+      }
+      .d2h-diff-tbody tr td {
+        border: none !important;
+      }
+      .d2h-file-diff {
+        border-top: none;
+      }
+    </style>
+  </head>
   <body>
-    <div id="myDiffElement"></div>
+    <div class="diff-toolbar">
+      <input type="text" id="fileFilter" placeholder="Filter files..." />
+      <button id="expandAll">Expand All</button>
+      <button id="collapseAll">Collapse All</button>
+      <div class="mode-toggle">
+        <button id="modeSideBySide" class="active">Side-by-Side</button>
+        <button id="modeUnified">Unified</button>
+      </div>
+      <div class="diff-stats" id="diffStats"></div>
+    </div>
+    <div class="diff-sidebar">
+      <div class="sidebar-header">Files</div>
+      <div class="file-tree" id="fileTree"></div>
+    </div>
+    <div class="diff-content" id="diffContent">
+      <div id="myDiffElement"></div>
+    </div>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/diff2html/bundles/js/diff2html-ui.min.js"></script>
+    <script>
+      const diffString = {{{diffString}}};
+
+      document.addEventListener('DOMContentLoaded', function () {
+        var targetElement = document.getElementById('myDiffElement');
+        var diffContent = document.getElementById('diffContent');
+        var currentMode = 'side-by-side';
+
+        function renderDiff(mode) {
+          currentMode = mode;
+          var configuration = {
+            drawFileList: false,
+            fileContentToggle: true,
+            matching: 'lines',
+            outputFormat: mode,
+            synchronisedScroll: true,
+            highlight: true,
+            renderNothingWhenEmpty: false,
+            colorScheme: 'auto',
+            stickyFileHeaders: true,
+            diffMaxChanges: 5000,
+            diffMaxLineLength: 10000,
+          };
+
+          targetElement.innerHTML = '';
+          var diff2htmlUi = new Diff2HtmlUI(targetElement, diffString, configuration);
+          diff2htmlUi.draw();
+          diff2htmlUi.highlightCode();
+          return diff2htmlUi;
+        }
+
+        // Extract file info from diff wrappers
+        function getFileData() {
+          var wrappers = document.querySelectorAll('.d2h-file-wrapper');
+          var data = [];
+          wrappers.forEach(function(wrapper, idx) {
+            var nameEl = wrapper.querySelector('.d2h-file-name');
+            var fullPath = nameEl ? nameEl.textContent.trim() : 'Unknown';
+            var adds = wrapper.querySelectorAll('.d2h-ins').length;
+            var dels = wrapper.querySelectorAll('.d2h-del').length;
+            var status = 'modified';
+            if (dels === 0 && adds > 0) status = 'added';
+            else if (adds === 0 && dels > 0) status = 'deleted';
+            data.push({ fullPath, adds, dels, status, idx });
+          });
+          return data;
+        }
+
+        // Find wrapper by path (after re-render)
+        function findWrapperByPath(path) {
+          var wrappers = document.querySelectorAll('.d2h-file-wrapper');
+          for (var i = 0; i < wrappers.length; i++) {
+            var nameEl = wrappers[i].querySelector('.d2h-file-name');
+            if (nameEl && nameEl.textContent.trim() === path) {
+              return wrappers[i];
+            }
+          }
+          return null;
+        }
+
+        // Initial render
+        renderDiff('side-by-side');
+        var fileData = getFileData();
+
+        // Build file tree (static, doesn't change with mode)
+        var tree = {};
+        fileData.forEach(function(f) {
+          var parts = f.fullPath.split('/');
+          var current = tree;
+          parts.forEach(function(part, i) {
+            if (i === parts.length - 1) {
+              current[part] = f;
+            } else {
+              current[part] = current[part] || {};
+              current = current[part];
+            }
+          });
+        });
+
+        function renderTree(node, container, depth) {
+          var keys = Object.keys(node).sort(function(a, b) {
+            var aIsDir = typeof node[a] !== 'object' || node[a].fullPath === undefined;
+            var bIsDir = typeof node[b] !== 'object' || node[b].fullPath === undefined;
+            if (aIsDir && !bIsDir) return -1;
+            if (!aIsDir && bIsDir) return 1;
+            return a.localeCompare(b);
+          });
+
+          keys.forEach(function(key) {
+            var val = node[key];
+            if (val.fullPath) {
+              // File
+              var fileEl = document.createElement('div');
+              fileEl.className = 'tree-file';
+              fileEl.dataset.path = val.fullPath;
+              var badge = '<span class="badge ' + val.status + '">' +
+                (val.status === 'added' ? '+' : val.status === 'deleted' ? '-' : '~') + '</span>';
+              fileEl.innerHTML = '<span>' + key + '</span>' + badge;
+              fileEl.onclick = function() {
+                document.querySelectorAll('.tree-file').forEach(function(f) { f.classList.remove('active'); });
+                fileEl.classList.add('active');
+                var wrapper = findWrapperByPath(val.fullPath);
+                if (wrapper) wrapper.scrollIntoView({ behavior: 'smooth', block: 'start' });
+              };
+              container.appendChild(fileEl);
+            } else {
+              // Folder
+              var folderEl = document.createElement('div');
+              folderEl.className = 'tree-folder';
+              folderEl.innerHTML = '<span class="icon">▼</span><span>' + key + '</span>';
+              var children = document.createElement('div');
+              children.className = 'tree-children';
+              folderEl.onclick = function(e) {
+                e.stopPropagation();
+                folderEl.classList.toggle('collapsed');
+                folderEl.querySelector('.icon').textContent = folderEl.classList.contains('collapsed') ? '▶' : '▼';
+              };
+              container.appendChild(folderEl);
+              container.appendChild(children);
+              renderTree(val, children, depth + 1);
+            }
+          });
+        }
+
+        var treeContainer = document.getElementById('fileTree');
+        renderTree(tree, treeContainer, 0);
+
+        // Stats
+        var totalAdds = fileData.reduce(function(s, f) { return s + f.adds; }, 0);
+        var totalDels = fileData.reduce(function(s, f) { return s + f.dels; }, 0);
+        document.getElementById('diffStats').innerHTML =
+          fileData.length + ' files | <span class="add">+' + totalAdds + '</span> <span class="del">-' + totalDels + '</span>';
+
+        // Mode toggle
+        var btnSideBySide = document.getElementById('modeSideBySide');
+        var btnUnified = document.getElementById('modeUnified');
+
+        btnSideBySide.addEventListener('click', function() {
+          if (currentMode === 'side-by-side') return;
+          btnSideBySide.classList.add('active');
+          btnUnified.classList.remove('active');
+          renderDiff('side-by-side');
+        });
+
+        btnUnified.addEventListener('click', function() {
+          if (currentMode === 'line-by-line') return;
+          btnUnified.classList.add('active');
+          btnSideBySide.classList.remove('active');
+          renderDiff('line-by-line');
+        });
+
+        // Filter
+        document.getElementById('fileFilter').addEventListener('input', function(e) {
+          var query = e.target.value.toLowerCase();
+          document.querySelectorAll('.tree-file').forEach(function(f) {
+            var path = f.dataset.path.toLowerCase();
+            f.classList.toggle('hidden', query && !path.includes(query));
+          });
+          document.querySelectorAll('.d2h-file-wrapper').forEach(function(w) {
+            var nameEl = w.querySelector('.d2h-file-name');
+            var path = nameEl ? nameEl.textContent.trim().toLowerCase() : '';
+            w.style.display = (query && !path.includes(query)) ? 'none' : '';
+          });
+        });
+
+        // Expand/Collapse All
+        document.getElementById('expandAll').addEventListener('click', function() {
+          document.querySelectorAll('.d2h-file-wrapper').forEach(function(wrapper) {
+            var diffEl = wrapper.querySelector('.d2h-file-diff');
+            if (diffEl) diffEl.style.display = '';
+          });
+        });
+        document.getElementById('collapseAll').addEventListener('click', function() {
+          document.querySelectorAll('.d2h-file-wrapper').forEach(function(wrapper) {
+            var diffEl = wrapper.querySelector('.d2h-file-diff');
+            if (diffEl) diffEl.style.display = 'none';
+          });
+        });
+      });
+    </script>
   </body>
 </html>

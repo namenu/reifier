@@ -18,6 +18,7 @@ export interface CaptureOptions {
   pattern: string;
   orphanBranch?: string;
   noPush?: boolean;
+  clean?: boolean;
 }
 
 const DEFAULT_ORPHAN_BRANCH = "reified";
@@ -31,6 +32,7 @@ export async function capture(options: CaptureOptions): Promise<string> {
     pattern,
     orphanBranch = DEFAULT_ORPHAN_BRANCH,
     noPush = false,
+    clean = false,
   } = options;
 
   const repoPath = path.resolve(repo);
@@ -38,6 +40,15 @@ export async function capture(options: CaptureOptions): Promise<string> {
 
   console.log(`Switching to ${branch}`);
   await switchBranch(ops, branch);
+
+  if (clean) {
+    console.log("Cleaning previous build artifacts...");
+    try {
+      execSync("git clean -fdx", { cwd: repoPath, stdio: "inherit" });
+    } catch {
+      console.warn("Clean failed, continuing anyway");
+    }
+  }
 
   console.log("Running build...");
   runBuild({ cwd: repoPath, command: buildCommand });

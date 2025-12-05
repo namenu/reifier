@@ -43,7 +43,9 @@ export function renderHtml(diffString: string): string {
   }
 
   // JSON.stringify escapes backticks, quotes, newlines, etc.
-  return Mustache.render(template, { diffString: JSON.stringify(diffString) });
+  // Also escape </script> to prevent XSS and early script termination
+  const escaped = JSON.stringify(diffString).replace(/<\/script>/gi, '<\\/script>');
+  return Mustache.render(template, { diffString: escaped });
 }
 
 export function generateDiffHtml(srcDir: string, dstDir: string): string {

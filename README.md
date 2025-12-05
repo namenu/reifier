@@ -79,6 +79,23 @@ reifier diff <repo> <base> <head> [options]
 reifier diff . main feature-branch -o diff.html
 ```
 
+### `deploy` - diff HTML 배포
+
+생성된 diff HTML을 surge.sh에 배포하여 공유 링크 생성.
+
+```bash
+reifier deploy <html-file> [options]
+```
+
+**예시:**
+```bash
+# 랜덤 도메인으로 배포
+reifier deploy diff.html
+
+# 커스텀 도메인 지정
+reifier deploy diff.html -d my-diff.surge.sh
+```
+
 ## 옵션
 
 | 옵션 | 설명 | 기본값 |
@@ -86,7 +103,21 @@ reifier diff . main feature-branch -o diff.html
 | `-b, --build <cmd>` | 빌드 명령어 | `yarn && yarn build` |
 | `-p, --pattern <regex>` | 캡처할 파일 패턴 (정규식) | `.*\.bs\.js` |
 | `-o, --output <file>` | 출력 파일 경로 | stdout |
+| `--clean` | 빌드 전 이전 결과물 정리 | false |
 | `--no-push` | git push 생략 | false |
+
+## 설정 파일
+
+프로젝트 루트에 `.reifierrc` 파일을 생성하면 기본값을 설정할 수 있다.
+
+```json
+{
+  "buildCommand": "pnpm build",
+  "pattern": ".*\\.mjs$"
+}
+```
+
+CLI 옵션이 설정 파일보다 우선한다.
 
 ## 작동 방식
 

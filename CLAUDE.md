@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-Reifier is a CLI tool for comparing build artifacts between Git branches. It's designed for PR review workflows where you want to visually inspect compiled output differences (e.g., ReScript `.bs.js` files).
+Babbage is a CLI tool for comparing build artifacts between Git branches. It's designed for PR review workflows where you want to visually inspect compiled output differences (e.g., ReScript `.bs.js` files).
 
 ## Commands
 

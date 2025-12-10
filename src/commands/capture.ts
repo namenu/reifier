@@ -11,6 +11,7 @@ import {
   GitOps,
 } from "../lib/git.js";
 import { runBuild } from "../lib/build.js";
+import { getSourceRepoId } from "../lib/repo-id.js";
 
 export interface CaptureOptions {
   repo: string;
@@ -20,6 +21,8 @@ export interface CaptureOptions {
   orphanBranch?: string;
   noPush?: boolean;
   clean?: boolean;
+  artifactRepo?: string;
+  repoId?: string;
 }
 
 const DEFAULT_ORPHAN_BRANCH = "reified";
@@ -34,30 +37,32 @@ export async function capture(options: CaptureOptions): Promise<string> {
     orphanBranch = DEFAULT_ORPHAN_BRANCH,
     noPush = false,
     clean = false,
+    artifactRepo,
+    repoId,
   } = options;
 
-  const repoPath = path.resolve(repo);
-  const ops = createGit(repoPath);
+  const sourceRepoPath = path.resolve(repo);
+  const sourceOps = createGit(sourceRepoPath);
 
   console.log(`Switching to ${branch}`);
-  await switchBranch(ops, branch);
+  await switchBranch(sourceOps, branch);
 
   if (clean) {
     console.log("Cleaning previous build artifacts...");
     try {
-      execSync("git clean -fdx", { cwd: repoPath, stdio: "inherit" });
+      execSync("git clean -fdx", { cwd: sourceRepoPath, stdio: "inherit" });
     } catch {
       console.warn("Clean failed, continuing anyway");
     }
   }
 
   console.log("Running build...");
-  runBuild({ cwd: repoPath, command: buildCommand });
+  runBuild({ cwd: sourceRepoPath, command: buildCommand });
 
   // Collect files BEFORE switching to orphan branch
   // (orphan branch switch may clear tracked files from working directory)
   console.log(`Collecting artifacts matching: ${include.join(", ")}`);
-  const collectedFiles = collectArtifacts(repoPath, include);
+  const collectedFiles = collectArtifacts(sourceRepoPath, include);
 
   if (collectedFiles.length === 0) {
     console.log("No files matched the pattern");
@@ -65,13 +70,33 @@ export async function capture(options: CaptureOptions): Promise<string> {
     console.log(`Found ${collectedFiles.length} files to capture`);
   }
 
-  console.log(`Switching to orphan branch: ${orphanBranch}`);
-  await switchToOrphan(ops, orphanBranch);
+  // Determine artifact storage location
+  let artifactOps: GitOps;
+  let dstDir: string;
+
+  if (artifactRepo) {
+    // Use separate artifact repository
+    const artifactRepoPath = path.resolve(artifactRepo);
+    artifactOps = createGit(artifactRepoPath);
+
+    const sourceId = await getSourceRepoId(sourceRepoPath, repoId);
+    console.log(`Using repo ID: ${sourceId}`);
+
+    dstDir = path.join(artifactRepoPath, ARTIFACTS_DIR, sourceId, branch);
+
+    console.log(`Switching artifact repo to orphan branch: ${orphanBranch}`);
+    await switchToOrphan(artifactOps, orphanBranch);
+  } else {
+    // Use same repository (original behavior)
+    artifactOps = sourceOps;
+    dstDir = path.join(sourceRepoPath, ARTIFACTS_DIR, branch);
+
+    console.log(`Switching to orphan branch: ${orphanBranch}`);
+    await switchToOrphan(artifactOps, orphanBranch);
+  }
 
   // Clear git index
-  await clearIndex(ops);
-
-  const dstDir = path.join(repoPath, ARTIFACTS_DIR, branch);
+  await clearIndex(artifactOps);
 
   // Clear and create destination directory
   fs.rmSync(dstDir, { recursive: true, force: true });
@@ -90,12 +115,12 @@ export async function capture(options: CaptureOptions): Promise<string> {
 
   // Commit
   console.log("Committing artifacts...");
-  await commitArtifacts(ops, branch);
+  await commitArtifacts(artifactOps, branch);
 
   // Push
   if (!noPush) {
     console.log("Pushing to remote...");
-    await pushBranch(ops, orphanBranch);
+    await pushBranch(artifactOps, orphanBranch);
   }
 
   console.log(`Capture complete: ${branch}`);

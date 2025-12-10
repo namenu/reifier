@@ -1,62 +1,66 @@
-# Reifier
+# Babbage
 
-Git 브랜치 간 빌드 결과물(artifact)을 비교하는 CLI 도구.
+<p align="center">
+  <img src="assets/image.png" alt="Babbage" width="200">
+</p>
 
-PR 리뷰 시 컴파일된 결과물의 변경사항을 시각적으로 확인할 수 있다.
+A CLI tool for comparing build artifacts between Git branches.
 
-## 설치
+Visually inspect compiled output differences during PR reviews.
+
+## Installation
 
 ```bash
-npm install -g reifier
-# 또는
-npx reifier
+npm install -g babbage
+# or
+npx babbage
 ```
 
 ## Quick Start
 
 ```bash
-# 두 브랜치의 빌드 결과물 비교
-npx reifier run ./my-repo \
+# Compare build artifacts between two branches
+npx babbage run ./my-repo \
   --base main \
   --head feature-branch \
   --include "src/**/*.js" \
   -o diff.html
 ```
 
-이 명령어는:
-1. `main` 브랜치로 전환 → 빌드 → 결과물 캡처
-2. `feature-branch`로 전환 → 빌드 → 결과물 캡처
-3. 두 결과물의 diff를 HTML로 생성
+This command:
+1. Switches to `main` branch → builds → captures artifacts
+2. Switches to `feature-branch` → builds → captures artifacts
+3. Generates an HTML diff of the two results
 
-## Include 패턴 (필수)
+## Include Pattern (Required)
 
-`--include` 옵션은 **필수**이며, 캡처할 파일을 glob 패턴으로 지정한다.
+The `--include` option is **required** and specifies files to capture using glob patterns.
 
-### 패턴 작성 가이드
+### Pattern Guidelines
 
 ```bash
-# ✅ 좋은 예: 구체적인 경로 지정
---include "apps/web/src/**/*.mjs"      # 특정 앱의 src만
---include "src/**/*.js"                 # src 하위의 JS만
---include "dist/**/*.js"                # dist 폴더만
+# Good: Specific paths
+--include "apps/web/src/**/*.mjs"      # Only specific app's src
+--include "src/**/*.js"                 # Only JS under src
+--include "dist/**/*.js"                # Only dist folder
 
-# ❌ 나쁜 예: 너무 넓은 범위
---include "**/*.mjs"                    # node_modules도 포함될 수 있음
---include "*.js"                        # 모든 JS 파일
+# Bad: Too broad
+--include "**/*.mjs"                    # May include node_modules
+--include "*.js"                        # All JS files
 ```
 
-### 여러 패턴 지정
+### Multiple Patterns
 
 ```bash
-# 여러 --include 옵션 사용
-reifier run . --base main --head feature \
+# Use multiple --include options
+babbage run . --base main --head feature \
   --include "apps/web/src/**/*.mjs" \
   --include "packages/lib/src/**/*.js"
 ```
 
-### 설정 파일로 관리
+### Configuration File
 
-프로젝트 루트에 `.reifierrc` 파일:
+Create a `.babbage` file in your project root:
 
 ```json
 {
@@ -68,141 +72,141 @@ reifier run . --base main --head feature \
 }
 ```
 
-## CLI 명령어
+## CLI Commands
 
-### `run` - 전체 파이프라인
+### `run` - Full Pipeline
 
-가장 일반적인 사용법. 두 브랜치를 비교하는 전체 과정을 한 번에 실행.
+The most common usage. Runs the entire comparison process at once.
 
 ```bash
-reifier run <repo> --base <branch> --head <branch> [options]
+babbage run <repo> --base <branch> --head <branch> [options]
 ```
 
-**예시:**
+**Examples:**
 ```bash
-# 기본 사용
-reifier run . --base main --head feature/new-ui --include "src/**/*.js"
+# Basic usage
+babbage run . --base main --head feature/new-ui --include "src/**/*.js"
 
-# 커스텀 빌드 명령어
-reifier run . --base main --head develop \
+# Custom build command
+babbage run . --base main --head develop \
   --build "npm run build" \
   --include "dist/**/*.js"
 
-# 여러 패턴 지정
-reifier run . --base main --head feature \
+# Multiple patterns
+babbage run . --base main --head feature \
   --include "apps/web/src/**/*.mjs" \
   --include "packages/lib/src/**/*.js"
 
-# 결과를 파일로 저장
-reifier run . --base main --head feature \
+# Save output to file
+babbage run . --base main --head feature \
   --include "src/**/*.js" \
   -o diff.html
 
-# git push 생략 (로컬 테스트용)
-reifier run . --base main --head feature \
+# Skip git push (for local testing)
+babbage run . --base main --head feature \
   --include "src/**/*.js" \
   --no-push
 ```
 
-### `capture` - 단일 브랜치 캡처
+### `capture` - Single Branch Capture
 
-특정 브랜치의 빌드 결과물만 캡처. 이미 캡처된 브랜치가 있을 때 유용.
+Capture build artifacts from a specific branch. Useful when one branch is already captured.
 
 ```bash
-reifier capture <repo> <branch> [options]
+babbage capture <repo> <branch> [options]
 ```
 
-**예시:**
+**Examples:**
 ```bash
-reifier capture . main --include "src/**/*.js"
-reifier capture . feature-branch \
+babbage capture . main --include "src/**/*.js"
+babbage capture . feature-branch \
   --build "yarn build" \
   --include "dist/**/*.js"
 ```
 
-### `diff` - diff HTML 생성
+### `diff` - Generate Diff HTML
 
-이미 캡처된 두 브랜치의 결과물로 diff HTML 생성.
+Generate diff HTML from already captured branches.
 
 ```bash
-reifier diff <repo> <base> <head> [options]
+babbage diff <repo> <base> <head> [options]
 ```
 
-**예시:**
+**Examples:**
 ```bash
-reifier diff . main feature-branch -o diff.html
+babbage diff . main feature-branch -o diff.html
 ```
 
-### `deploy` - diff HTML 배포
+### `deploy` - Deploy Diff HTML
 
-생성된 diff HTML을 surge.sh에 배포하여 공유 링크 생성.
+Deploy generated diff HTML to surge.sh for sharing.
 
 ```bash
-reifier deploy <html-file> [options]
+babbage deploy <html-file> [options]
 ```
 
-**예시:**
+**Examples:**
 ```bash
-# 랜덤 도메인으로 배포
-reifier deploy diff.html
+# Deploy with random domain
+babbage deploy diff.html
 
-# 커스텀 도메인 지정
-reifier deploy diff.html -d my-diff.surge.sh
+# Custom domain
+babbage deploy diff.html -d my-diff.surge.sh
 ```
 
-## 옵션
+## Options
 
-| 옵션 | 설명 | 기본값 |
-|------|------|--------|
-| `-b, --build <cmd>` | 빌드 명령어 | `yarn && yarn build` |
-| `-i, --include <glob>` | 캡처할 파일 패턴 (glob, 여러번 지정 가능) | **필수** |
-| `-o, --output <file>` | 출력 파일 경로 | stdout |
-| `--clean` | 빌드 전 이전 결과물 정리 | false |
-| `--no-push` | git push 생략 | false |
+| Option | Description | Default |
+|--------|-------------|---------|
+| `-b, --build <cmd>` | Build command | `yarn && yarn build` |
+| `-i, --include <glob>` | File pattern to capture (glob, can be specified multiple times) | **Required** |
+| `-o, --output <file>` | Output file path | stdout |
+| `--clean` | Clean previous artifacts before building | false |
+| `--no-push` | Skip git push | false |
 
-CLI 옵션이 설정 파일(`.reifierrc`)보다 우선한다.
+CLI options take precedence over config file (`.babbage`).
 
-## 작동 방식
+## How It Works
 
-1. **캡처**: 각 브랜치에서 빌드 실행 후, 패턴에 맞는 파일들을 `_artifacts/{branch}/` 디렉토리에 복사
-2. **저장**: `reified`라는 orphan 브랜치에 결과물 커밋 (히스토리 추적용)
-3. **비교**: 두 브랜치의 `_artifacts` 디렉토리를 `diff`로 비교
-4. **렌더링**: [diff2html](https://diff2html.xyz/)로 보기 좋은 HTML 생성
+1. **Capture**: Run build on each branch, copy files matching pattern to `_artifacts/{branch}/`
+2. **Store**: Commit artifacts to an orphan branch called `reified` (for history tracking)
+3. **Compare**: Compare `_artifacts` directories using `diff -ruN`
+4. **Render**: Generate beautiful HTML using [diff2html](https://diff2html.xyz/)
 
-## 사용 예시
+## Usage Examples
 
-### ReScript 프로젝트
+### ReScript Project
 
 ```bash
-# apps/web/src 하위의 .mjs 파일만 비교
-reifier run . --base main --head feature \
+# Compare only .mjs files under apps/web/src
+babbage run . --base main --head feature \
   --include "apps/web/src/**/*.mjs"
 ```
 
-### TypeScript 프로젝트
+### TypeScript Project
 
 ```bash
-reifier run . --base main --head feature \
+babbage run . --base main --head feature \
   --build "npm run build" \
   --include "dist/**/*.js"
 ```
 
-### Monorepo 프로젝트
+### Monorepo Project
 
 ```bash
-# 여러 패키지의 빌드 결과물 비교
-reifier run . --base main --head feature \
+# Compare build artifacts from multiple packages
+babbage run . --base main --head feature \
   --build "pnpm build" \
   --include "packages/*/dist/**/*.js" \
   --include "apps/*/build/**/*.js"
 ```
 
-## 라이브러리로 사용
+## Programmatic Usage
 
 ```typescript
-import { capture, diff, run } from 'reifier';
+import { capture, diff, run } from 'babbage';
 
-// 전체 파이프라인
+// Full pipeline
 await run({
   repo: '.',
   base: 'main',
@@ -212,7 +216,7 @@ await run({
   output: 'diff.html',
 });
 
-// 개별 명령어
+// Individual commands
 await capture({
   repo: '.',
   branch: 'main',

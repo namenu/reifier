@@ -1,15 +1,17 @@
 import * as fs from "fs";
 import * as path from "path";
 
-export interface ReifierConfig {
+export interface BabbageConfig {
   buildCommand?: string;
   include?: string[];
   artifactsBranch?: string;
+  artifactRepo?: string;
+  repoId?: string;
 }
 
-const CONFIG_FILES = [".reifierrc", ".reifierrc.json", "reifier.config.js"];
+const CONFIG_FILES = [".babbage", ".babbage.json", "babbage.config.js"];
 
-export function loadConfig(dir: string): ReifierConfig {
+export function loadConfig(dir: string): BabbageConfig {
   const resolvedDir = path.resolve(dir);
 
   for (const filename of CONFIG_FILES) {
@@ -38,7 +40,7 @@ export function loadConfig(dir: string): ReifierConfig {
 
 export function mergeConfig<T extends Record<string, unknown>>(
   cliOptions: T,
-  fileConfig: ReifierConfig
+  fileConfig: BabbageConfig
 ): T {
   // CLI options take precedence over file config
   const merged = { ...fileConfig } as T;

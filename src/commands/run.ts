@@ -14,16 +14,29 @@ export interface RunOptions {
   output?: string;
   clean?: boolean;
   noPush?: boolean;
+  artifactRepo?: string;
+  repoId?: string;
 }
 
 export async function run(options: RunOptions): Promise<string> {
-  const { repo, base, head, buildCommand, include, output, clean, noPush } = options;
+  const {
+    repo,
+    base,
+    head,
+    buildCommand,
+    include,
+    output,
+    clean,
+    noPush,
+    artifactRepo,
+    repoId,
+  } = options;
 
-  const repoPath = path.resolve(repo);
-  const ops = createGit(repoPath);
+  const sourceRepoPath = path.resolve(repo);
+  const sourceOps = createGit(sourceRepoPath);
 
   // Save current branch to restore later
-  const originalBranch = await getCurrentBranch(ops);
+  const originalBranch = await getCurrentBranch(sourceOps);
 
   try {
     // Capture base branch
@@ -35,6 +48,8 @@ export async function run(options: RunOptions): Promise<string> {
       include,
       clean,
       noPush,
+      artifactRepo,
+      repoId,
     });
 
     // Capture head branch
@@ -46,17 +61,26 @@ export async function run(options: RunOptions): Promise<string> {
       include,
       clean,
       noPush,
+      artifactRepo,
+      repoId,
     });
 
     // Switch to orphan branch to access artifacts
     console.log(`\n=== Generating diff ===\n`);
-    await switchToOrphan(ops, DEFAULT_ORPHAN_BRANCH);
+    if (artifactRepo) {
+      const artifactOps = createGit(path.resolve(artifactRepo));
+      await switchToOrphan(artifactOps, DEFAULT_ORPHAN_BRANCH);
+    } else {
+      await switchToOrphan(sourceOps, DEFAULT_ORPHAN_BRANCH);
+    }
 
     const html = await diff({
       repo,
       base,
       head,
       output,
+      artifactRepo,
+      repoId,
     });
 
     return html;
@@ -64,7 +88,7 @@ export async function run(options: RunOptions): Promise<string> {
     // Restore original branch
     console.log(`\nRestoring branch: ${originalBranch}`);
     try {
-      await switchBranch(ops, originalBranch);
+      await switchBranch(sourceOps, originalBranch);
     } catch {
       console.warn(`Could not restore to branch: ${originalBranch}`);
     }

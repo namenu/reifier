@@ -1,5 +1,5 @@
 {
-  "name": "reifier",
+  "name": "babbage",
   "version": "0.2.0",
   "description": "Git branch build artifact diff tool",
   "type": "module",
@@ -8,10 +8,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/namenu/reifier"
+    "url": "https://github.com/namenu/babbage"
   },
   "bin": {
-    "reifier": "./dist/cli.js"
+    "babbage": "./dist/cli.js"
   },
   "exports": {
     ".": {
